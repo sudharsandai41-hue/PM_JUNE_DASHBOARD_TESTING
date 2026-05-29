@@ -1,0 +1,3 @@
+GitHub Repository: PM_JUNE_DASHBOARD_TESTING
+Vercel Production URL: https://pm-june-dashboard.vercel.app
+Vercel Unique Deployment URL: https://pm-june-dashboard-9g6td3tzz-sudharsan303s-projects.vercel.app
