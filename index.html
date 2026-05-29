@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pencil &amp; Monk - Project Dashboard</title>
+  <!-- React and ReactDOM from CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel for runtime JSX compiling -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    html, body, #root {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #F8FAFC;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Local Storage Mock for sandbox storage compatibility -->
+  <script>
+    window.storage = {
+      get: async function(key) {
+        try {
+          const val = localStorage.getItem(key);
+          return { value: val };
+        } catch(e) {
+          return { value: null };
+        }
+      },
+      set: async function(key, val, options) {
+        try {
+          localStorage.setItem(key, val);
+          return true;
+        } catch(e) {
+          return false;
+        }
+      }
+    };
+  </script>
+
+  <!-- Inlined Dashboard Application -->
+  <script type="text/babel">
+    const DESIGN_STAGES = [
+      "P1 · Site documentation",
+      "P2 · Furniture layout",
+      "P2 · Concept moodboard",
+      "P3 · 3D renders (3 sets)",
+      "P4 · Material board & FFE",
+      "P4 · BOQ",
+      "P5 · GFC / detail drawings",
+    ];
+    const BUILD_STAGES = [
+      "Site handover",
+      "Procurement",
+      "Civil / carpentry / services",
+      "Finishing",
+      "Snagging",
+      "Handover",
+    ];
+    const STATUSES = ["grey", "green", "orange", "red"];
+    const STATUS_COL = { green: "#10B981", orange: "#F59E0B", red: "#EF4444", grey: "#94A3B8" };
+    const STATUS_LABEL = { green: "Done / on track", orange: "In progress / due", red: "Stuck / overdue", grey: "Not started" };
+
+    const CSS_STYLING = `
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --font-title: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --bg-main: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --border-color: #E2E8F0;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --primary: #0F172A;
+      --primary-light: #F1F5F9;
+      
+      --green: #10B981;
+      --orange: #F59E0B;
+      --red: #EF4444;
+      --grey: #94A3B8;
+      
+      --green-bg: #ECFDF5;
+      --green-border: rgba(16, 185, 129, 0.3);
+      --green-text: #065F46;
+      
+      --orange-bg: #FFFBEB;
+      --orange-border: rgba(245, 158, 11, 0.3);
+      --orange-text: #92400E;
+      
+      --red-bg: #FEF2F2;
+      --red-border: rgba(239, 68, 68, 0.3);
+      --red-text: #991B1B;
+      
+      --grey-bg: #F1F5F9;
+      --grey-border: rgba(148, 163, 184, 0.3);
+      --grey-text: #475569;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--bg-main);
+      font-family: var(--font-body);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .pm-app {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .pm-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .pm-logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pm-logo-mark {
+      background: var(--primary);
+      color: #fff;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-title);
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: -1px;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+    }
+
+    .pm-logo-text {
+      font-family: var(--font-title);
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+    }
+
+    .pm-logo-subtext {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .pm-logo-dot {
+      width: 6px;
+      height: 6px;
+      background-color: #10B981;
+      border-radius: 50%;
+    }
+
+    .pm-tab-container {
+      display: flex;
+      background: #E2E8F0;
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .pm-tab-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .pm-tab-btn.active {
+      background: #fff;
+      color: var(--text-main);
+      box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08);
+    }
+
+    /* Sidebar styling */
+    .pm-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 28px;
+    }
+
+    @media (max-width: 1024px) {
+      .pm-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pm-sidebar {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      align-self: flex-start;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    .pm-sidebar-title {
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .pm-search-box {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .pm-search-input {
+      width: 100%;
+      padding: 9px 12px 9px 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text-main);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .pm-search-input:focus {
+      border-color: #3B82F6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .pm-search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .pm-project-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .pm-project-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      background: transparent;
+      transition: all 0.2s;
+    }
+
+    .pm-project-item:hover {
+      background: var(--bg-main);
+    }
+
+    .pm-project-item.active {
+      background: #EFF6FF;
+      border-left-color: #3B82F6;
+    }
+
+    .pm-project-name-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+
+    .pm-project-item-name {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pm-project-item-type {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .pm-status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .pm-add-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px dashed var(--border-color);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .pm-add-btn:hover {
+      border-color: #3B82F6;
+      color: #3B82F6;
+      background: #F0F6FF;
+    }
+
+    /* Content Area */
+    .pm-content-wrapper {
+      animation: fadeInUp 0.4s ease-out;
+    }
+
+    /* Detail cards */
+    .pm-title-section {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .pm-title {
+      font-family: var(--font-title);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    .pm-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .pm-subtitle-dot {
+      width: 4px;
+      height: 4px;
+      background-color: var(--color-slate-200);
+      border-radius: 50%;
+    }
+
+    /* Financial cards */
+    .pm-financials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .pm-fin-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pm-fin-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .pm-fin-value {
+      font-family: var(--font-title);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .pm-fin-value.green {
+      color: var(--green);
+    }
+
+    /* Payment Progress Bar */
+    .pm-payment-progress-wrapper {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+
+    .pm-payment-progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .pm-progress-track {
+      height: 8px;
+      background-color: var(--color-slate-100);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .pm-progress-fill {
+      height: 100%;
+      background-color: var(--green);
+      border-radius: 4px;
+      transition: width 0.8s ease-in-out;
+    }
+
+    /* Bubbles area */
+    .pm-bubbles-container {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    /* Bubble card specific styles */
+    .bubble-stage-row {
+      transition: background-color 0.2s;
+    }
+    .bubble-stage-row:hover {
+      background-color: rgba(0, 0, 0, 0.03);
+      border-radius: 4px;
+    }
+
+    /* Status Log note card */
+    .pm-weekly-note-card {
+      background: #FAF9F5;
+      border: 1px solid #E6E4DC;
+      border-left: 4px solid var(--orange);
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto 28px;
+      position: relative;
+    }
+
+    .pm-weekly-note-title {
+      font-family: var(--font-title);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #854D0E;
+      margin-bottom: 6px;
+    }
+
+    .pm-weekly-note-text {
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: #454440;
+      font-style: italic;
+    }
+
+    /* Legend */
+    .pm-legend {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .pm-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pm-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Form Styles */
+    .pm-form-section {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+
+    .pm-form-title {
+      font-family: var(--font-title);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 16px;
+    }
+
+    .pm-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .pm-grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pm-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .pm-grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pm-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .pm-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .pm-input, .pm-select, .pm-textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      font-family: var(--font-body);
+      font-size: 13.5px;
+      color: var(--text-main);
+      outline: none;
+      background-color: #fff;
+      transition: all 0.2s;
+    }
+
+    .pm-input:focus, .pm-select:focus, .pm-textarea:focus {
+      border-color: #3B82F6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .pm-input-readonly {
+      background-color: var(--color-slate-100);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    /* Stage Row Editor */
+    .pm-stage-edit-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--color-slate-100);
+      flex-wrap: wrap;
+    }
+
+    .pm-stage-edit-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      flex: 1 1 180px;
+    }
+
+    .pm-status-selector {
+      display: flex;
+      gap: 6px;
+      background: var(--color-slate-100);
+      padding: 4px;
+      border-radius: 20px;
+    }
+
+    .pm-status-circle-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      position: relative;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .pm-status-circle-btn:hover {
+      transform: scale(1.15);
+    }
+
+    .pm-status-circle-btn.selected {
+      border-color: var(--text-main);
+      box-shadow: 0 0 0 2px #fff;
+      transform: scale(1.25);
+    }
+
+    .pm-stage-note-input {
+      flex: 2 1 200px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+    }
+
+    /* Danger actions */
+    .pm-danger-zone {
+      border: 1px dashed #FCA5A5;
+      background: #FFF5F5;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    .pm-danger-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .pm-danger-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--red-text);
+    }
+
+    .pm-danger-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .pm-delete-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--red-border);
+      background: transparent;
+      color: var(--red);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .pm-delete-btn:hover {
+      background: var(--red);
+      color: #fff;
+      border-color: var(--red);
+    }
+
+    /* Empty state */
+    .pm-empty-state {
+      text-align: center;
+      padding: 48px;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+
+    .pm-empty-title {
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .pm-empty-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* Animations and helper classes */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulseOrange {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
+    @keyframes pulseRed {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .status-dot-green { background-color: var(--green); }
+    .status-dot-orange { background-color: var(--orange); animation: pulseOrange 2s infinite; }
+    .status-dot-red { background-color: var(--red); animation: pulseRed 2s infinite; }
+    .status-dot-grey { background-color: var(--grey); }
+
+    .status-dot-inner-green { background-color: var(--green); }
+    .status-dot-inner-orange { background-color: var(--orange); }
+    .status-dot-inner-red { background-color: var(--red); }
+    .status-dot-inner-grey { background-color: var(--grey); }
+    `;
+
+    // Helper component for SVG icons
+    const SearchIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+    );
+
+    const PlusIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    );
+
+    const TrashIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        <line x1="10" y1="11" x2="10" y2="17"></line>
+        <line x1="14" y1="11" x2="14" y2="17"></line>
+      </svg>
+    );
+
+    const UserIcon = () => (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    );
+
+    const MapPinIcon = () => (
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
+      </svg>
+    );
+
+    const CloudCheckIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+        <path d="M21.21 15.89A6 6 0 1 1 15.5 6h-.69a8 8 0 1 0-7.81 10"></path>
+        <polyline points="7.5 10.5 10.5 13.5 15.5 8.5"></polyline>
+      </svg>
+    );
+
+    const CloudSyncIcon = () => (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', animation: 'spin 2s linear infinite' }}>
+        <path d="M21.2 15c.7-1.2 1-2.5.7-3.9-.5-2-2-3.5-4-4H17.2c-1.3-3-4-5-7.2-5-4.4 0-8 3.6-8 8 0 1.4.4 2.8 1.1 4"></path>
+        <path d="M16 16l-4-4-4 4"></path>
+        <path d="M12 12v9"></path>
+      </svg>
+    );
+
+    function seedProjects() {
+      return [
+        {
+          id: "sudhakar",
+          name: "Sudhakar Residence",
+          type: "Design",
+          meta: "7,300 sq.ft · Chennai",
+          designOwner: "Rubika S",
+          buildOwner: "",
+          grandTotal: 3014900,
+          received: 904470,
+          note: "3D renders signed off — Phase III payment (40%, Rs. 12,05,960) now due. Currently in Phase IV: material board & FFE in progress, BOQ next.",
+          design: [
+            { st: "green", note: "done" },
+            { st: "green", note: "approved" },
+            { st: "green", note: "approved" },
+            { st: "green", note: "signed off · 40% due" },
+            { st: "orange", note: "in progress" },
+            { st: "grey", note: "next · 20% on signoff" },
+            { st: "grey", note: "10% before handover" },
+          ],
+          build: BUILD_STAGES.map(() => ({ st: "grey", note: "" })),
+          lastUpdated: new Date().toISOString(),
+        },
+      ];
+    }
+
+    function rupee(n) {
+      if (n == null || n === "") return "—";
+      return "Rs. " + Number(n).toLocaleString("en-IN");
+    }
+
+    function formatDateTime(isoString) {
+      if (!isoString) return "Never updated";
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) return "Never updated";
+      const day = date.getDate();
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      let hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return `${day} ${month} ${year}, ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+    }
+
+    function App() {
+      const [projects, setProjects] = React.useState(null);
+      const [activeId, setActiveId] = React.useState(null);
+      const [mode, setMode] = React.useState("view"); // view | input
+      const [saving, setSaving] = React.useState(false);
+      const [searchQuery, setSearchQuery] = React.useState("");
+
+      React.useEffect(() => {
+        (async () => {
+          try {
+            const r = await window.storage.get("pm_projects");
+            if (r && r.value) {
+              const parsed = JSON.parse(r.value);
+              const updatedParsed = parsed.map(p => ({
+                ...p,
+                lastUpdated: p.lastUpdated || new Date().toISOString()
+              }));
+              setProjects(updatedParsed);
+              setActiveId(updatedParsed[0]?.id || null);
+              return;
+            }
+          } catch (e) { /* not set yet */ }
+          const seed = seedProjects();
+          setProjects(seed);
+          setActiveId(seed[0].id);
+        })();
+      }, []);
+
+      async function persist(next) {
+        setProjects(next);
+        try {
+          setSaving(true);
+          await window.storage.set("pm_projects", JSON.stringify(next), true);
+        } catch (e) { /* ignore */ }
+        setSaving(false);
+      }
+
+      if (!projects) {
+        return <div style={{ padding: 40, fontFamily: "sans-serif", color: "#64748B" }}>Loading dashboard…</div>;
+      }
+
+      const filteredProjects = projects.filter((p) =>
+        (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.meta || "").toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+      const active = projects.find((p) => p.id === activeId) || projects[0] || null;
+
+      function updateActive(patch) {
+        if (!active) return;
+        persist(projects.map((p) => (p.id === active.id ? { ...p, ...patch, lastUpdated: new Date().toISOString() } : p)));
+      }
+
+      function updateStage(block, i, field, val) {
+        if (!active) return;
+        const arr = active[block].map((s, idx) => (idx === i ? { ...s, [field]: val } : s));
+        updateActive({ [block]: arr });
+      }
+
+      function addProject() {
+        const id = "proj_" + Date.now();
+        const np = {
+          id,
+          name: "New project",
+          type: "Design",
+          meta: "",
+          designOwner: "",
+          buildOwner: "",
+          grandTotal: "",
+          received: "",
+          note: "",
+          design: DESIGN_STAGES.map(() => ({ st: "grey", note: "" })),
+          build: BUILD_STAGES.map(() => ({ st: "grey", note: "" })),
+          lastUpdated: new Date().toISOString(),
+        };
+        const next = [...projects, np];
+        persist(next);
+        setActiveId(id);
+        setMode("input");
+      }
+
+      function deleteProject(id) {
+        if (confirm("Are you sure you want to delete this project?")) {
+          const next = projects.filter((p) => p.id !== id);
+          persist(next);
+          if (next.length > 0) {
+            setActiveId(next[0].id);
+          } else {
+            setActiveId(null);
+          }
+        }
+      }
+
+      const outstanding = active ? (Number(active.grandTotal) || 0) - (Number(active.received) || 0) : 0;
+
+      return (
+        <div className="pm-app">
+          <style dangerouslySetInnerHTML={{ __html: CSS_STYLING }} />
+          
+          {/* Header */}
+          <div className="pm-header">
+            <div className="pm-logo-area">
+              <div className="pm-logo-mark">P&amp;M</div>
+              <div>
+                <div className="pm-logo-text">Pencil &amp; Monk</div>
+                <div className="pm-logo-subtext">
+                  {saving ? (
+                    <>
+                      <CloudSyncIcon /> Saving changes…
+                    </>
+                  ) : (
+                    <>
+                      <CloudCheckIcon /> All changes synced
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="pm-tab-container">
+              <button className={`pm-tab-btn ${mode === "view" ? "active" : ""}`} onClick={() => setMode("view")}>
+                Dashboard View
+              </button>
+              <button className={`pm-tab-btn ${mode === "input" ? "active" : ""}`} onClick={() => setMode("input")}>
+                Team Input
+              </button>
+            </div>
+          </div>
+
+          <div className="pm-layout">
+            {/* Project List Sidebar */}
+            <div className="pm-sidebar">
+              <div className="pm-sidebar-title">Projects</div>
+              
+              <div className="pm-search-box">
+                <span className="pm-search-icon"><SearchIcon /></span>
+                <input
+                  type="text"
+                  className="pm-search-input"
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="pm-project-list">
+                {filteredProjects.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "center", padding: "10px 0" }}>No projects found</div>
+                ) : (
+                  filteredProjects.map((p) => {
+                    const flags = [...p.design, ...(p.type === "Design" ? [] : p.build)];
+                    const worst = flags.some((s) => s.st === "red")
+                      ? "red"
+                      : flags.some((s) => s.st === "orange")
+                      ? "orange"
+                      : flags.every((s) => s.st === "green")
+                      ? "green"
+                      : "grey";
+
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => setActiveId(p.id)}
+                        className={`pm-project-item ${active && p.id === active.id ? "active" : ""}`}
+                      >
+                        <div className="pm-project-name-group">
+                          <span className="pm-project-item-name">{p.name}</span>
+                          <span className="pm-project-item-type">{p.type === "Design" ? "Design Only" : "Design + Build"}</span>
+                        </div>
+                        <span className={`pm-status-indicator status-dot-${worst}`} />
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <button onClick={addProject} className="pm-add-btn">
+                <PlusIcon /> Add project
+              </button>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="pm-content-wrapper">
+              {active ? (
+                mode === "view" ? (
+                  <DashboardView p={active} outstanding={outstanding} />
+                ) : (
+                  <InputForm
+                    p={active}
+                    updateActive={updateActive}
+                    updateStage={updateStage}
+                    outstanding={outstanding}
+                    deleteProject={deleteProject}
+                  />
+                )
+              ) : (
+                <div className="pm-empty-state">
+                  <div className="pm-empty-title">No Active Project</div>
+                  <div className="pm-empty-desc">Get started by creating a new design or construction project.</div>
+                  <button onClick={addProject} className="pm-add-btn" style={{ maxWidth: 160, margin: "0 auto" }}>
+                    <PlusIcon /> Create project
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Bubble({ title, owner, color, bg, border, stages, names, themeGlow }) {
+      const total = stages.length;
+      const done = stages.filter((s) => s.st === "green").length;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+      // SVG Circular progress configurations
+      const radius = 162;
+      const circumference = 2 * Math.PI * radius;
+      const strokeDashoffset = circumference - (pct / 100) * circumference;
+
+      return (
+        <div style={{ position: "relative", width: 360, height: 360, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {/* Dynamic SVG Circular Track */}
+          <svg style={{ position: "absolute", top: 0, left: 0, width: 360, height: 360, transform: "rotate(-90deg)", pointerEvents: "none" }}>
+            {/* Track circle */}
+            <circle cx="180" cy="180" r={radius} fill="none" stroke="#E2E8F0" strokeWidth="6" />
+            {/* Progress arc */}
+            <circle
+              cx="180"
+              cy="180"
+              r={radius}
+              fill="none"
+              stroke={border}
+              strokeWidth="6"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              style={{ transition: "stroke-dashoffset 0.8s ease-in-out" }}
+            />
+          </svg>
+
+          {/* Glassmorphic Central Card */}
+          <div
+            style={{
+              width: 308,
+              height: 308,
+              borderRadius: "50%",
+              background: bg,
+              border: "1px solid " + border,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "24px 20px",
+              boxSizing: "border-box",
+              zIndex: 1,
+              boxShadow: `0 8px 30px ${themeGlow}`,
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color, marginBottom: 2 }}>
+              {title}
+            </div>
+            
+            <div style={{ fontSize: 11, color, opacity: 0.85, marginBottom: 8, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+              <UserIcon /> Owner: {owner || "—"}
+            </div>
+            
+            <div
+              style={{
+                background: color,
+                color: "#fff",
+                fontSize: 10,
+                padding: "3px 10px",
+                borderRadius: 12,
+                fontWeight: 700,
+                marginBottom: 14,
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              {pct}% Complete
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 5, width: "100%", overflowY: "auto", paddingRight: 4 }}>
+              {names.map((n, i) => (
+                <div key={i} className="bubble-stage-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 4px" }}>
+                  <span className={`status-dot-${stages[i].st}`} style={{ width: 8, height: 8, borderRadius: "50%", flex: "none", display: "inline-block" }} />
+                  <span style={{ fontSize: 11.5, fontWeight: 500, color: "#1E293B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {n}
+                  </span>
+                  {stages[i].note && (
+                    <span
+                      className="stage-note-pill"
+                      style={{
+                        marginLeft: "auto",
+                        fontSize: 9.5,
+                        color: "#64748B",
+                        background: "rgba(15, 23, 42, 0.05)",
+                        padding: "1px 6px",
+                        borderRadius: 4,
+                        maxWidth: 100,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={stages[i].note}
+                    >
+                      {stages[i].note}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function DashboardView({ p, outstanding }) {
+      const totalVal = Number(p.grandTotal) || 0;
+      const receivedVal = Number(p.received) || 0;
+      const paidPct = totalVal > 0 ? Math.round((receivedVal / totalVal) * 100) : 0;
+
+      return (
+        <div className="pm-content-wrapper">
+          <div className="pm-title-section">
+            <div className="pm-title">{p.name}</div>
+            <div className="pm-subtitle">
+              <span>{p.type === "Design" ? "Design Only" : "Design + Build"}</span>
+              {p.meta && (
+                <>
+                  <span className="pm-subtitle-dot" />
+                  <span>
+                    <MapPinIcon /> {p.meta}
+                  </span>
+                </>
+              )}
+              <span className="pm-subtitle-dot" />
+              <span>
+                Last updated: {formatDateTime(p.lastUpdated)}
+              </span>
+            </div>
+          </div>
+
+          {/* KPI Cards Grid */}
+          <div className="pm-financials-grid">
+            <div className="pm-fin-card">
+              <div className="pm-fin-label">Grand Total</div>
+              <div className="pm-fin-value">{rupee(p.grandTotal)}</div>
+            </div>
+            <div className="pm-fin-card" style={{ borderTop: "3px solid var(--green)" }}>
+              <div className="pm-fin-label">Amount Received</div>
+              <div className="pm-fin-value green">{rupee(p.received)}</div>
+            </div>
+            <div className="pm-fin-card" style={{ borderTop: outstanding > 0 ? "3px solid var(--orange)" : "1px solid var(--border-color)" }}>
+              <div className="pm-fin-label">Outstanding Balance</div>
+              <div className="pm-fin-value">{rupee(outstanding)}</div>
+            </div>
+          </div>
+
+          {/* Payment Progress bar */}
+          {totalVal > 0 && (
+            <div className="pm-payment-progress-wrapper">
+              <div className="pm-payment-progress-header">
+                <span>Payment Collection Progress</span>
+                <span>
+                  {paidPct}% Collected ({rupee(receivedVal)} of {rupee(totalVal)})
+                </span>
+              </div>
+              <div className="pm-progress-track">
+                <div className="pm-progress-fill" style={{ width: `${paidPct}%` }} />
+              </div>
+            </div>
+          )}
+
+          {/* Dials/Bubbles */}
+          <div className="pm-bubbles-container">
+            <Bubble
+              title="Design Block"
+              owner={p.designOwner}
+              color="#1D4ED8"
+              bg="#EFF6FF"
+              border="#3B82F6"
+              stages={p.design}
+              names={DESIGN_STAGES}
+              themeGlow="rgba(59, 130, 246, 0.08)"
+            />
+            {p.type !== "Design" && (
+              <Bubble
+                title="Build Block"
+                owner={p.buildOwner}
+                color="#047857"
+                bg="#ECFDF5"
+                border="#10B981"
+                stages={p.build}
+                names={BUILD_STAGES}
+                themeGlow="rgba(16, 185, 129, 0.08)"
+              />
+            )}
+          </div>
+
+          {/* Status log note */}
+          {p.note && (
+            <div className="pm-weekly-note-card">
+              <div className="pm-weekly-note-title">Status update this week</div>
+              <div className="pm-weekly-note-text">"{p.note}"</div>
+            </div>
+          )}
+
+          {/* Status Legend */}
+          <div className="pm-legend">
+            {STATUSES.map((s) => (
+              <span key={s} className="pm-legend-item">
+                <span className={`pm-legend-dot status-dot-${s}`} />
+                <span>{STATUS_LABEL[s]}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function InputForm({ p, updateActive, updateStage, outstanding, deleteProject }) {
+      function StageRows({ block, names }) {
+        return (
+          <div>
+            {names.map((n, i) => (
+              <div key={i} className="pm-stage-edit-row">
+                <span className="pm-stage-edit-name">{n}</span>
+                <div className="pm-status-selector">
+                  {STATUSES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => updateStage(block, i, "st", s)}
+                      title={STATUS_LABEL[s]}
+                      className={`pm-status-circle-btn ${p[block][i].st === s ? "selected" : ""}`}
+                      style={{ backgroundColor: STATUS_COL[s] }}
+                    />
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={p[block][i].note}
+                  onChange={(e) => updateStage(block, i, "note", e.target.value)}
+                  placeholder="Add stage status note..."
+                  className="pm-input pm-stage-note-input"
+                />
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return (
+        <div className="pm-content-wrapper">
+          <div className="pm-form-section">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+              <div className="pm-form-title" style={{ margin: 0 }}>Project Profile Details</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Last updated: {formatDateTime(p.lastUpdated)}</div>
+            </div>
+            <div className="pm-grid-2">
+              <div className="pm-form-group">
+                <label className="pm-label">Project Name</label>
+                <input type="text" className="pm-input" value={p.name} onChange={(e) => updateActive({ name: e.target.value })} />
+              </div>
+              <div className="pm-form-group">
+                <label className="pm-label">Engagement Type</label>
+                <select className="pm-select" value={p.type} onChange={(e) => updateActive({ type: e.target.value })}>
+                  <option value="Design">Design only</option>
+                  <option value="D+Build">Design &amp; Build</option>
+                </select>
+              </div>
+            </div>
+            <div className="pm-grid-3">
+              <div className="pm-form-group">
+                <label className="pm-label">Project Meta / Location</label>
+                <input
+                  type="text"
+                  className="pm-input"
+                  value={p.meta}
+                  placeholder="e.g. 7,300 sq.ft · Chennai"
+                  onChange={(e) => updateActive({ meta: e.target.value })}
+                />
+              </div>
+              <div className="pm-form-group">
+                <label className="pm-label">Design Lead / Owner</label>
+                <input type="text" className="pm-input" value={p.designOwner} onChange={(e) => updateActive({ designOwner: e.target.value })} />
+              </div>
+              {p.type !== "Design" ? (
+                <div className="pm-form-group">
+                  <label className="pm-label">Build Lead / Owner</label>
+                  <input type="text" className="pm-input" value={p.buildOwner} onChange={(e) => updateActive({ buildOwner: e.target.value })} />
+                </div>
+              ) : (
+                <div className="pm-form-group" style={{ opacity: 0.5 }}>
+                  <label className="pm-label">Build Lead / Owner</label>
+                  <input type="text" className="pm-input pm-input-readonly" disabled value="Not applicable for Design-only" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="pm-form-section">
+            <div className="pm-form-title">Financial Profile (INR)</div>
+            <div className="pm-grid-3">
+              <div className="pm-form-group">
+                <label className="pm-label">Contract Value (Rs.)</label>
+                <input
+                  type="number"
+                  className="pm-input"
+                  value={p.grandTotal}
+                  placeholder="Grand total contract value"
+                  onChange={(e) => updateActive({ grandTotal: e.target.value })}
+                />
+              </div>
+              <div className="pm-form-group">
+                <label className="pm-label">Total Amount Received (Rs.)</label>
+                <input
+                  type="number"
+                  className="pm-input"
+                  value={p.received}
+                  placeholder="Amount received so far"
+                  onChange={(e) => updateActive({ received: e.target.value })}
+                />
+              </div>
+              <div className="pm-form-group">
+                <label className="pm-label">Outstanding Balance</label>
+                <div className="pm-input pm-input-readonly" style={{ fontWeight: 600 }}>
+                  {rupee(outstanding)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pm-form-section">
+            <div className="pm-form-title" style={{ color: "#1D4ED8", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#1D4ED8" }} />
+              Design Phase Work stages
+            </div>
+            <StageRows block="design" names={DESIGN_STAGES} />
+          </div>
+
+          {p.type !== "Design" && (
+            <div className="pm-form-section">
+              <div className="pm-form-title" style={{ color: "#047857", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#047857" }} />
+                Build Phase Work stages
+              </div>
+              <StageRows block="build" names={BUILD_STAGES} />
+            </div>
+          )}
+
+          <div className="pm-form-section">
+            <div className="pm-form-title">Status Summary This Week</div>
+            <textarea
+              rows={3}
+              value={p.note}
+              placeholder="Type active summary of the project health, current bottlenecks or upcoming milestones..."
+              className="pm-textarea"
+              onChange={(e) => updateActive({ note: e.target.value })}
+            />
+          </div>
+
+          {/* Delete/Danger Area */}
+          <div className="pm-danger-zone">
+            <div className="pm-danger-text-group">
+              <div className="pm-danger-title">Danger Zone</div>
+              <div className="pm-danger-desc">Deleting this project will permanently remove it from the workspace list. This action is irreversible.</div>
+            </div>
+            <button type="button" onClick={() => deleteProject(p.id)} className="pm-delete-btn">
+              <TrashIcon /> Delete Project
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>
